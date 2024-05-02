@@ -1,15 +1,15 @@
-FROM golang:1.20.1-alpine AS build
+FROM golang:1-alpine AS builder
 RUN apk add --no-cache git ca-certificates
-WORKDIR /src/app
+WORKDIR /src
 COPY . .
-RUN go build -o /app
+RUN go build -o /registryproxy
 
 FROM alpine
 RUN apk add --no-cache ca-certificates
-COPY --from=build /app /app
+COPY --from=builder /registryproxy /
 
 # uncomment the following two lines if you're exposing a private GCR registry
 # COPY key.json /key.json
 # ENV GOOGLE_APPLICATION_CREDENTIALS /key.json
 
-ENTRYPOINT [ "/app" ]
+ENTRYPOINT [ "/registryproxy" ]
