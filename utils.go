@@ -10,6 +10,7 @@ import (
 	"net/http/httputil"
 	"regexp"
 	"strings"
+	"time"
 )
 
 // MatchMap returns a map of named capture groups and a boolean "matched" value
@@ -52,9 +53,16 @@ func SetUserAgent(req *http.Request) bool {
 	return false
 }
 
-// parseTokenRequestResponse takes an *http.Response, checks if the content type is application/json,
+type TokenResponse struct {
+	Token     string    `json:"token"`      // matches "token" in the JSON
+	ExpiresIn uint      `json:"expires_in"` // matches "expires_in" in the JSON
+	IssuedAt  time.Time `json:"issued_at"`  // matches "issued_at" in the JSON
+	Error     string    `json:"error"`      // just in case
+}
+
+// ParseTokenRequestResponse takes an *http.Response, checks if the content type is application/json,
 // and returns a map[string]string parsed from the JSON body
-func parseTokenRequestResponse(resp *http.Response) (*tokenResponse, error) {
+func ParseTokenRequestResponse(resp *http.Response) (*TokenResponse, error) {
 	// Check that the response Content-Type header is application/json
 	contentType := resp.Header.Get("Content-Type")
 	if contentType != "application/json" {
@@ -69,7 +77,7 @@ func parseTokenRequestResponse(resp *http.Response) (*tokenResponse, error) {
 	}
 
 	// Unmarshal JSON data into a map
-	var response tokenResponse
+	var response TokenResponse
 	if err := json.Unmarshal(body, &response); err != nil {
 		return nil, fmt.Errorf("parseTokenRequestResponse: failed to unmarshal JSON: %w, body: %s", err, body)
 	}
@@ -77,9 +85,9 @@ func parseTokenRequestResponse(resp *http.Response) (*tokenResponse, error) {
 	return &response, nil
 }
 
-// replaceResponseBody takes an *http.Response and a map[string]string, then replaces
+// ReplaceResponseBody takes an *http.Response and a map[string]string, then replaces
 // the response's body with a JSON-encoded version of the map.
-func replaceResponseBody(resp *http.Response, data *tokenResponse) error {
+func ReplaceResponseBody(resp *http.Response, data *TokenResponse) error {
 	// Marshal the map into JSON
 	jsonData, err := json.Marshal(data)
 	if err != nil {
@@ -105,9 +113,14 @@ type WWWAuthFields struct {
 	Error   string
 }
 
-// parseWWWAuthenticateHeader parses the given header contents and returns a struct
+// String returns a value useable as Www-Authenticate header
+func (authFields WWWAuthFields) String() string {
+	return fmt.Sprintf(`Bearer realm="%s",service="%s",scope="%s"`, authFields.Realm, authFields.Service, authFields.Scope)
+}
+
+// ParseWWWAuthenticateHeader parses the given header contents and returns a struct
 // containing the parsed values; returns a WWWAuthFields struct and a boolean OK value
-func parseWWWAuthenticateHeader(headerValue string) (WWWAuthFields, bool) {
+func ParseWWWAuthenticateHeader(headerValue string) (WWWAuthFields, bool) {
 	fieldRegex := regexp.MustCompile(`(realm|service|scope|error)="([^"]+)"`)
 	matches := fieldRegex.FindAllStringSubmatch(headerValue, -1)
 
@@ -133,13 +146,8 @@ func parseWWWAuthenticateHeader(headerValue string) (WWWAuthFields, bool) {
 	return result, ok
 }
 
-// String returns a value useable as Www-Authenticate header
-func (authFields WWWAuthFields) String() string {
-	return fmt.Sprintf(`Bearer realm="%s",service="%s",scope="%s"`, authFields.Realm, authFields.Service, authFields.Scope)
-}
-
-// logRequest logs the contents of an http.Request object
-func logRequest(preamble string, req *http.Request) {
+// LogRequest logs the contents of an http.Request object
+func LogRequest(preamble string, req *http.Request) {
 	dump, err := httputil.DumpRequest(req, true)
 	if err != nil {
 		log.Printf("logRequest: Error dumping request: %v", err)
@@ -151,8 +159,8 @@ func logRequest(preamble string, req *http.Request) {
 	log.Printf("%s%s", preamble, dump)
 }
 
-// logResponse logs the contents of an http.Response object
-func logResponse(preamble string, resp *http.Response) {
+// LogResponse logs the contents of an http.Response object
+func LogResponse(preamble string, resp *http.Response) {
 	dump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
 		log.Printf("logResponse: Error dumping response: %v", err)
@@ -164,8 +172,8 @@ func logResponse(preamble string, resp *http.Response) {
 	log.Printf("%s%s", preamble, dump)
 }
 
-// cleanHeaders removes all headers from the request that start with "X-"
-func cleanHeaders(req *http.Request) {
+// CleanHeaders removes all headers from the request that start with "X-"
+func CleanHeaders(req *http.Request) {
 	for key := range req.Header {
 		if strings.HasPrefix(key, "X-") && key != proxyConfigHeader {
 			req.Header.Del(key)
@@ -173,7 +181,7 @@ func cleanHeaders(req *http.Request) {
 	}
 }
 
-// slashJoin joins the two given strings with a slash (ensuring exactly one slash)
-func slashJoin(a, b string) string {
+// SlashJoin joins the two given strings with a slash (ensuring exactly one slash)
+func SlashJoin(a, b string) string {
 	return fmt.Sprintf("%s/%s", strings.TrimRight(a, "/"), strings.TrimLeft(b, "/"))
 }
