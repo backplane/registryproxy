@@ -3,4 +3,4 @@
 *.pem
 config.yaml
 key.json
-serverless-registry-proxy
+registryproxy

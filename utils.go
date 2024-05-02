@@ -47,7 +47,7 @@ func SetUserAgent(req *http.Request) bool {
 	origHost := req.Context().Value(ctxKeyOriginalHost).(string)
 
 	if userAgent := req.Header.Get("user-agent"); userAgent != "" {
-		req.Header.Set("user-agent", fmt.Sprintf("registry-proxy/%s customDomain/%s %s", version, origHost, userAgent))
+		req.Header.Set("user-agent", fmt.Sprintf("registryproxy/%s customDomain/%s %s", version, origHost, userAgent))
 		return true
 	}
 	return false
