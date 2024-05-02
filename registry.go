@@ -110,7 +110,7 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 	// and: https://distribution.github.io/distribution/spec/auth/token/
 	if authHeader := resp.Header.Get("www-authenticate"); authHeader != "" {
 		log.Printf("registryRoundtripper.RoundTrip: have www-authenticate header:%s", authHeader)
-		authHeaderFields, ok := ParseWWWAuthenticateHeader(authHeader)
+		authHeaderFields, ok := ParseWWWAuthenticate(authHeader)
 		if !ok {
 			return nil, fmt.Errorf("registryRoundtripper.RoundTrip: parsing WWW-Authenticate header failed; header: %s", authHeader)
 		}

@@ -17,7 +17,6 @@ limitations under the License.
 package main
 
 import (
-	"context"
 	"fmt"
 	"log"
 	"net/http"
@@ -35,7 +34,7 @@ const (
 )
 
 var (
-	tokenEndpoints = map[string]*WWWAuthFields{} // mapping of registryHosts to token endpoint URLs
+	tokenEndpoints = map[string]*WWWAuthenticateData{} // mapping of registryHosts to token endpoint URLs
 )
 
 func main() {
@@ -85,52 +84,4 @@ func main() {
 	}
 
 	log.Printf("server shutdown successfully")
-}
-
-// DiscoverTokenEndpoint runs at startup and attempts to get the URL of the remote token service for the given registry;
-// for example with docker hub the result is "https://auth.docker.io/token"
-func DiscoverTokenEndpoint(registryHost string) (*WWWAuthFields, error) {
-	url := fmt.Sprintf("https://%s/v2/", registryHost)
-	log.Printf("discoverTokenEndpoint: making request to %s", url)
-	resp, err := http.Get(url)
-	LogResponse("discoverTokenEndpoint: received the following response", resp)
-	if err != nil {
-		return nil, fmt.Errorf("discoverTokenEndpoint: failed to query the registry host %s: %+v", registryHost, err)
-	}
-
-	authHeader := resp.Header.Get("www-authenticate")
-	if authHeader == "" {
-		return nil, fmt.Errorf("discoverTokenEndpoint: www-authenticate header not returned from %s, cannot locate token endpoint", url)
-	}
-	authHeaderFields, ok := ParseWWWAuthenticateHeader(authHeader)
-	if !ok {
-		return nil, fmt.Errorf("discoverTokenEndpoint: www-authenticate header could not be parsed; header: %s", authHeader)
-	}
-
-	log.Printf("discoverTokenEndpoint: DEBUG: parsed www-authenticate header %+v", authHeaderFields)
-	log.Printf("discoverTokenEndpoint: registry %s: discovered token endpoint at %s", registryHost, authHeaderFields.Realm)
-	return &authHeaderFields, nil
-}
-
-// CaptureHostHeader is a middleware to capture Host header in a context key.
-func CaptureHostHeader(next http.Handler) http.Handler {
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		ctx := context.WithValue(req.Context(), ctxKeyOriginalHost, req.Host)
-		next.ServeHTTP(rw, req.WithContext(ctx))
-	})
-}
-
-// PanicLogger intends to log something when an http handler panics
-func PanicLogger(next http.Handler) http.Handler {
-	// Note: this needs testing/validation, the entire concept of this middleware
-	// may be the result of several wrong assumptions
-	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
-		defer func() {
-			if err := recover(); err != nil {
-				log.Printf("Recovered in HTTP handler: %v", err)
-				http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
-			}
-		}()
-		next.ServeHTTP(rw, req)
-	})
 }

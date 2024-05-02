@@ -106,7 +106,7 @@ func ReplaceResponseBody(resp *http.Response, data *TokenResponse) error {
 	return nil
 }
 
-type WWWAuthFields struct {
+type WWWAuthenticateData struct {
 	Realm   string
 	Service string
 	Scope   string
@@ -114,17 +114,17 @@ type WWWAuthFields struct {
 }
 
 // String returns a value useable as Www-Authenticate header
-func (authFields WWWAuthFields) String() string {
+func (authFields WWWAuthenticateData) String() string {
 	return fmt.Sprintf(`Bearer realm="%s",service="%s",scope="%s"`, authFields.Realm, authFields.Service, authFields.Scope)
 }
 
-// ParseWWWAuthenticateHeader parses the given header contents and returns a struct
+// ParseWWWAuthenticate parses the given header contents and returns a struct
 // containing the parsed values; returns a WWWAuthFields struct and a boolean OK value
-func ParseWWWAuthenticateHeader(headerValue string) (WWWAuthFields, bool) {
+func ParseWWWAuthenticate(headerValue string) (WWWAuthenticateData, bool) {
 	fieldRegex := regexp.MustCompile(`(realm|service|scope|error)="([^"]+)"`)
 	matches := fieldRegex.FindAllStringSubmatch(headerValue, -1)
 
-	result := WWWAuthFields{}
+	result := WWWAuthenticateData{}
 	ok := false
 
 	for _, match := range matches {
