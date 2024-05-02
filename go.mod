@@ -1,4 +1,4 @@
-module serverless-registry-proxy
+module registryproxy
 
 go 1.22
 
