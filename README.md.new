@@ -1,5 +1,0 @@
-# registryproxy
-
-This work-in-progress is a hard fork of [ahmetb/serverless-registry-proxy](https://github.com/ahmetb/serverless-registry-proxy) which adds some features we want like support for multiple registries.
-
-See [README-original.md](README-upstream.md) for the original project's documentation.
