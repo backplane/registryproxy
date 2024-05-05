@@ -18,40 +18,46 @@ package main
 
 import (
 	"fmt"
-	"log"
+	"log/slog"
 	"net/http"
+	"os"
 	"strings"
 
 	"aidanwoods.dev/go-paseto"
 )
 
-type originalHostContextKey string
-
 const (
-	ctxKeyOriginalHost           = originalHostContextKey("original-host")
 	proxyConfigHeader     string = "X-Proxy-Config"
 	tokenKeyUpstreamToken string = "upstream-token"
 )
 
 var (
 	tokenEndpoints = map[string]*WWWAuthenticateData{} // mapping of registryHosts to token endpoint URLs
+	logger         *slog.Logger
 )
+
+func init() {
+	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+}
 
 func main() {
 	// load the yaml config file
 	config, err := LoadConfig()
 	if err != nil {
-		log.Fatalf("config loading error: %s", err)
+		logger.Error("config loading error", "error", err)
+		os.Exit(1)
 	}
 	config.Log()
 
 	// the secret key is used to process the PASETO tokens we issue to clients
 	if config.SecretKey == "" {
-		log.Fatal("SecretKey not found in config")
+		logger.Error("SecretKey not found in config")
+		os.Exit(1)
 	}
 	pasetoSecretKey, err := paseto.V4SymmetricKeyFromHex(config.SecretKey)
 	if err != nil {
-		log.Fatalf("Failed to parse PASETO symmetric key; err: %s", err)
+		logger.Error("Failed to parse PASETO symmetric key", "err", err)
+		os.Exit(1)
 	}
 
 	// set up http handlers for each proxy
@@ -65,23 +71,42 @@ func main() {
 			// tokenEndpoints we look it up, then add it
 			endpoint, err := DiscoverTokenEndpoint(proxy.RegistryHost)
 			if err != nil {
-				log.Fatalf("unable to discover token endpoint corresponding to the registry:%s; err:%s", proxy.RegistryHost, err)
+				logger.Error("unable to discover token endpoint", "registry", proxy.RegistryHost, "error", err)
+				os.Exit(1)
+
 			}
 			tokenEndpoints[proxy.RegistryHost] = endpoint
 		}
 
 		proxyPath := fmt.Sprintf("/v2/%s/", strings.Trim(proxy.LocalPrefix, "/"))
-		log.Printf("setup handler for path:%s pointing to proxy: %s", proxyPath, proxy.LocalPrefix)
-		mux.Handle(proxyPath, NewRegistryProxy(proxy, pasetoSecretKey))
+		logger.Info("setup handler", "path", proxyPath, "proxy", proxy.LocalPrefix)
+		mux.Handle(proxyPath, NewRegistryProxy(proxy, pasetoSecretKey, config.ProxyFQDN))
 	}
 
 	// serve
 	hostport := fmt.Sprintf("%s:%s", config.ListenAddr, config.ListenPort)
-	log.Printf("starting to listen on %s", hostport)
+	logger.Info("listening for network connections", "addr", hostport)
 
-	if err := http.ListenAndServe(hostport, PanicLogger(CaptureHostHeader(mux))); err != http.ErrServerClosed {
-		log.Fatalf("listen error: %+v", err)
+	if err := http.ListenAndServe(hostport, PanicLogger(mux)); err != http.ErrServerClosed {
+		logger.Error("unable to start network listener", "error", err)
+		os.Exit(1)
+
 	}
 
-	log.Printf("server shutdown successfully")
+	logger.Info("server shutdown successfully")
+}
+
+// PanicLogger intends to log something when an http handler panics
+func PanicLogger(next http.Handler) http.Handler {
+	// Note: this needs testing/validation, the entire concept of this middleware
+	// may be the result of several wrong assumptions
+	return http.HandlerFunc(func(rw http.ResponseWriter, req *http.Request) {
+		defer func() {
+			if err := recover(); err != nil {
+				logger.Error("PanicLogger recovered in HTTP handler", "handler", err)
+				http.Error(rw, "Internal Server Error", http.StatusInternalServerError)
+			}
+		}()
+		next.ServeHTTP(rw, req)
+	})
 }

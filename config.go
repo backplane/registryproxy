@@ -20,6 +20,7 @@ type ProxyItem struct {
 type Config struct {
 	ListenAddr string               `yaml:"listen_addr"`
 	ListenPort string               `yaml:"listen_port"`
+	ProxyFQDN  string               `yaml:"proxy_fqdn"`
 	Proxies    map[string]ProxyItem `yaml:"proxies"`
 	SecretKey  string               `yaml:"secretkey"`
 }
@@ -61,7 +62,6 @@ func (cfg Config) Log() {
 		log.Fatalf("problem printing config: +%v", err)
 	}
 	log.Printf("starting up with the following configuration:\n%s", configJSON)
-
 }
 
 // BestMatch searches through the configured proxies and tries to find the best

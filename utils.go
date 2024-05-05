@@ -5,7 +5,6 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"regexp"
@@ -42,12 +41,11 @@ func MatchMap(needle *regexp.Regexp, haystack string) (map[string]string, bool) 
 
 	return result, true
 }
-func SetUserAgent(req *http.Request) bool {
+func SetUserAgent(req *http.Request, fqdn string) bool {
 	version := "0.1.0" // fixme: implement auto updates
-	origHost := req.Context().Value(ctxKeyOriginalHost).(string)
 
 	if userAgent := req.Header.Get("user-agent"); userAgent != "" {
-		req.Header.Set("user-agent", fmt.Sprintf("registryproxy/%s customDomain/%s %s", version, origHost, userAgent))
+		req.Header.Set("user-agent", fmt.Sprintf("registryproxy/%s customDomain/%s %s", version, fqdn, userAgent))
 		return true
 	}
 	return false
@@ -150,26 +148,27 @@ func ParseWWWAuthenticate(headerValue string) (WWWAuthenticateData, bool) {
 func LogRequest(preamble string, req *http.Request) {
 	dump, err := httputil.DumpRequest(req, true)
 	if err != nil {
-		log.Printf("logRequest: Error dumping request: %v", err)
+		logger.Debug("logRequest: Error dumping request: %v", err)
 		return
 	}
 	if preamble != "" {
 		preamble = preamble + ":\n"
 	}
-	log.Printf("%s%s", preamble, dump)
+	logger.Debug(preamble, "request", dump)
+
 }
 
 // LogResponse logs the contents of an http.Response object
 func LogResponse(preamble string, resp *http.Response) {
 	dump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		log.Printf("logResponse: Error dumping response: %v", err)
+		logger.Debug("logResponse: Error dumping response", "error", err)
 		return
 	}
 	if preamble != "" {
 		preamble = preamble + ":\n"
 	}
-	log.Printf("%s%s", preamble, dump)
+	logger.Debug(preamble, "response", dump)
 }
 
 // CleanHeaders removes all headers from the request that start with "X-"
