@@ -21,9 +21,10 @@ Below is an example configuration that demonstrates setting up RegistryProxy:
 # Generate "secretkey" with: openssl rand -hex 32
 # Generate "auth" with: echo "Basic $(printf '%s:%s' 'myusername' 'mypassword' | base64)"
 listen_addr: 0.0.0.0
-port: 5000
+listen_port: 5000
 secret_key: 796280902778385984e2acd2868447a0ee703a8fab0ed7e69103cd50b9e3cddd
-registry_fqdn: reg.example.com
+proxy_fqdn: reg.example.com
+log_level: DEBUG
 proxies:
   "bp/":
     registry: index.docker.io
