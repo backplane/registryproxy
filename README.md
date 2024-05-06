@@ -21,9 +21,10 @@ Below is an example configuration that demonstrates setting up RegistryProxy:
 # Generate "secretkey" with: openssl rand -hex 32
 # Generate "auth" with: echo "Basic $(printf '%s:%s' 'myusername' 'mypassword' | base64)"
 listen_addr: 0.0.0.0
-port: 5000
+listen_port: 5000
 secret_key: 796280902778385984e2acd2868447a0ee703a8fab0ed7e69103cd50b9e3cddd
-registry_fqdn: reg.example.com
+proxy_fqdn: reg.example.com
+log_level: DEBUG
 proxies:
   "bp/":
     registry: index.docker.io
@@ -38,15 +39,10 @@ With the above configuration, navigating to reg.example.com/bp/true will serve t
 
 To use RegistryProxy, follow these steps:
 
-1. Clone the repository:
+1. Create a config.yaml file with your specific configurations.
+2. Run the proxy:
     ```bash
-    git clone https://github.com/yourusername/registryproxy.git
-    ```
-2. Create a config.yaml file with your specific configurations.
-3. Build and run the proxy:
-    ```bash
-    docker build -t registryproxy .
-    docker run -p 5000:5000 registryproxy
+    docker run --rm -d -p 5000:5000 --volume "$(pwd)/config.yaml:/config.yaml:ro" backplane/registryproxy --config /config.yaml
     ```
 
 ## Security Considerations
