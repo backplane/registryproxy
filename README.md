@@ -22,7 +22,8 @@ Below is an example configuration that demonstrates setting up RegistryProxy:
 # Generate "auth" with: echo "Basic $(printf '%s:%s' 'myusername' 'mypassword' | base64)"
 listen_addr: 0.0.0.0
 port: 5000
-secretkey: 796280902778385984e2acd2868447a0ee703a8fab0ed7e69103cd50b9e3cddd
+secret_key: 796280902778385984e2acd2868447a0ee703a8fab0ed7e69103cd50b9e3cddd
+registry_fqdn: reg.example.com
 proxies:
   "bp/":
     registry: index.docker.io

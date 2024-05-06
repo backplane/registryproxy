@@ -96,7 +96,7 @@ func (tp *TokenProxy) Director(req *http.Request) {
 
 	// add the proxy config key to the request context so the transport function can use it
 	req.Header.Set(proxyConfigHeader, proxy.LocalPrefix)
-	logger.Debug("TokenProxy.Director: rewrote url:%s into:%s", originalURL, req.URL)
+	logger.Debug("TokenProxy.Director: rewrote url", "from", originalURL, "to", req.URL)
 }
 
 func (tp *TokenProxy) RoundTrip(req *http.Request) (*http.Response, error) {

@@ -152,9 +152,6 @@ func LogRequest(preamble string, req *http.Request) {
 		logger.Debug("logRequest: failed httputil.DumpRequest", "error", err)
 		return
 	}
-	if preamble != "" {
-		preamble = preamble + ":\n"
-	}
 	logger.Debug(preamble, "request", dump)
 
 }
@@ -165,9 +162,6 @@ func LogResponse(preamble string, resp *http.Response) {
 	if err != nil {
 		logger.Debug("logResponse: failed httputil.DumpResponse", "error", err)
 		return
-	}
-	if preamble != "" {
-		preamble = preamble + ":\n"
 	}
 	logger.Debug(preamble, "response", dump)
 }
@@ -182,8 +176,12 @@ func CleanHeaders(req *http.Request) {
 }
 
 // SlashJoin joins the two given strings with a slash (ensuring exactly one slash)
-func SlashJoin(a, b string) string {
-	return fmt.Sprintf("%s/%s", strings.TrimRight(a, "/"), strings.TrimLeft(b, "/"))
+func SlashJoin(a, b string, trim_exterior bool) string {
+	result := fmt.Sprintf("%s/%s", strings.TrimRight(a, "/"), strings.TrimLeft(b, "/"))
+	if trim_exterior {
+		return strings.Trim(result, "/")
+	}
+	return result
 }
 
 // setLogLevel sets the log level
