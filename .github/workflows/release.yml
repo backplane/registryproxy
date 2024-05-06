@@ -100,7 +100,7 @@ jobs:
               owner: context.repo.owner,
               repo: context.repo.repo
             });
-            return repoInfo.data.license.spdx_id;  # Using spdx_id to get the SPDX identifier
+            return repoInfo.data.license.spdx_id;
 
       # https://github.com/docker/metadata-action
       - name: Extract Docker metadata
