@@ -4,7 +4,8 @@ ARG TARGETPLATFORM
 # this is only there if goreleaser has created it
 COPY dist /dist/
 RUN set -eux; \
-  subdir=$(printf '/dist/cli_%s' "${TARGETPLATFORM}" | tr / _ | tr A-Z a-z); \
+  platform_dirname=$(printf '%s' "${TARGETPLATFORM}" | tr / _ | tr A-Z a-z); \
+  subdir=$(printf '/dist/cli_%s' $platform_dirname); \
   cp ${subdir}/registryproxy /registryproxy;
 
 FROM alpine:edge
