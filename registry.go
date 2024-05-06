@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"strings"
@@ -13,13 +12,15 @@ import (
 type RegistryProxy struct {
 	Config    ProxyItem
 	SecretKey paseto.V4SymmetricKey
+	FQDN      string
 }
 
 // NewRegistryProxy returns a reverse proxy to the specified registry.
-func NewRegistryProxy(cfg ProxyItem, secretKey paseto.V4SymmetricKey) http.HandlerFunc {
+func NewRegistryProxy(cfg ProxyItem, secretKey paseto.V4SymmetricKey, fqdn string) http.HandlerFunc {
 	rp := &RegistryProxy{
 		Config:    cfg,
 		SecretKey: secretKey,
+		FQDN:      fqdn,
 	}
 	return (&httputil.ReverseProxy{
 		FlushInterval: -1,
@@ -46,15 +47,16 @@ func (rp *RegistryProxy) Director(req *http.Request) {
 	}
 
 	req.RequestURI = "" // clearing this to avoid conflicts
-	log.Printf("rewriteRegistryV2URL: rewrote url: %s into %s", u, req.URL.String())
+	logger.Debug("RegistryProxy.Director: rewrote url",
+		"from", u,
+		"to", req.URL.String())
 }
 
 // RoundTrip receives the requests from the docker clients, modifies the
 // requests then performs them, finally it returns the modified result to the
 // client
 func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
-	log.Printf("registryRoundtripper.RoundTrip: request received with url=%s", req.URL)
-	origHost := req.Host
+	logger.Debug("RegistryProxy.RoundTrip: request received", "url", req.URL)
 
 	// Retrieve the proxy config context value
 	proxy := rp.Config
@@ -62,45 +64,45 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 	// replace the outgoing "Authorization: Bearer abcdeg..." header with one we embedded in the token
 	authHeader := req.Header.Get("Authorization")
 	if authHeader != "" {
-		log.Printf("registryRoundtripper.RoundTrip: have auth header: %s", authHeader)
+		logger.Debug("RegistryProxy.RoundTrip: have auth header", "header", authHeader)
 		if !strings.HasPrefix(authHeader, "Bearer ") {
-			return nil, fmt.Errorf("registryRoundtripper.RoundTrip: Authorization header in unknown format: %s", authHeader)
+			return nil, fmt.Errorf("RegistryProxy.RoundTrip: Authorization header in unknown format: %s", authHeader)
 		}
 		tokenString := strings.TrimPrefix(authHeader, "Bearer ")
 		parser := paseto.NewParserForValidNow()
 		token, err := parser.ParseV4Local(rp.SecretKey, tokenString, []byte{})
 		if err != nil {
-			return nil, fmt.Errorf("registryRoundtripper.RoundTrip: unable to parse token from auth header; token:%s; error:%s", tokenString, err)
+			return nil, fmt.Errorf("RegistryProxy.RoundTrip: unable to parse token from auth header; token:%s; error:%s", tokenString, err)
 		}
 
 		upstreamToken, err := token.GetString(tokenKeyUpstreamToken)
 		if err != nil {
-			log.Printf("claims found in token: %s", token.ClaimsJSON())
-			return nil, fmt.Errorf("registryRoundtripper.RoundTrip: unable to parse upstreamToken string from token; error:%s", err)
+			logger.Debug("claims found in token", "claims", token.ClaimsJSON())
+			return nil, fmt.Errorf("RegistryProxy.RoundTrip: unable to parse upstreamToken string from token; error:%s", err)
 		}
 
 		req.Header.Set("Authorization", fmt.Sprintf("Bearer %s", upstreamToken))
-		log.Printf("registryRoundtripper.RoundTrip: set Authorization header: %s", req.Header.Get("Authorization"))
+		logger.Debug("RegistryProxy.RoundTrip: set Authorization header", "header", req.Header.Get("Authorization"))
 	}
 
-	SetUserAgent(req)
+	SetUserAgent(req, rp.FQDN)
 	CleanHeaders(req)
 
-	LogRequest("registryRoundtripper.RoundTrip: about to make the following request to upstream", req)
+	LogRequest("RegistryProxy.RoundTrip: about to make the following request to upstream", req)
 
 	resp, err := http.DefaultTransport.RoundTrip(req)
-	LogResponse("registryRoundtripper.RoundTrip: response from upstream", resp)
+	LogResponse("RegistryProxy.RoundTrip: response from upstream", resp)
 	if err != nil {
-		log.Printf("registryRoundtripper.RoundTrip: upstream request failed with error: %+v", err)
+		logger.Error("RegistryProxy.RoundTrip: upstream request failed", "error", err)
 		return nil, err
 	}
-	log.Printf("registryRoundtripper.RoundTrip: upstream request completed (status=%d) url=%s", resp.StatusCode, req.URL)
+	logger.Info("RegistryProxy.RoundTrip: upstream request completed", "status", resp.StatusCode, "url", req.URL)
 
 	// Google Artifact Registry sends a "location: /artifacts-downloads/..." URL
 	// to download blobs. We don't want these routed to the proxy itself.
 	if locHdr := resp.Header.Get("location"); req.Method == http.MethodGet &&
 		resp.StatusCode == http.StatusFound && strings.HasPrefix(locHdr, "/") {
-		log.Printf("registryRoundtripper.RoundTrip: applying Google Artifact Registry location header")
+		logger.Info("RegistryProxy.RoundTrip: applying Google Artifact Registry location header")
 		resp.Header.Set("location", req.URL.Scheme+"://"+req.URL.Host+locHdr)
 	}
 
@@ -109,15 +111,15 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 	// see: https://developer.mozilla.org/en-US/docs/Web/HTTP/Headers/WWW-Authenticate
 	// and: https://distribution.github.io/distribution/spec/auth/token/
 	if authHeader := resp.Header.Get("www-authenticate"); authHeader != "" {
-		log.Printf("registryRoundtripper.RoundTrip: have www-authenticate header:%s", authHeader)
+		logger.Debug("RegistryProxy.RoundTrip: have www-authenticate header", "header", authHeader)
 		authHeaderFields, ok := ParseWWWAuthenticate(authHeader)
 		if !ok {
-			return nil, fmt.Errorf("registryRoundtripper.RoundTrip: parsing WWW-Authenticate header failed; header: %s", authHeader)
+			return nil, fmt.Errorf("RegistryProxy.RoundTrip: parsing WWW-Authenticate header failed; header: %s", authHeader)
 		}
-		log.Printf("registryRoundtripper.RoundTrip: parsed www-authenticate header: %+v", authHeaderFields)
+		logger.Debug("RegistryProxy.RoundTrip: parsed www-authenticate header", "parsed", authHeaderFields)
 
-		authHeaderFields.Realm = fmt.Sprintf(`https://%s/_token`, origHost)
-		authHeaderFields.Service = fmt.Sprintf(`https://%s`, origHost)
+		authHeaderFields.Realm = fmt.Sprintf(`https://%s/_token`, rp.FQDN)
+		authHeaderFields.Service = fmt.Sprintf(`https://%s`, rp.FQDN)
 		headerScope, err := ParseResourceScope(authHeaderFields.Scope)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse scope in www-authenticate header; error:%s", err)
@@ -127,7 +129,7 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 
 		newAuthHeader := authHeaderFields.String()
 		resp.Header.Set("www-authenticate", newAuthHeader)
-		log.Printf("registryRoundtripper.RoundTrip: rewrote www-authenticate header;\n  from: %s\n    to: %s", authHeader, newAuthHeader)
+		logger.Debug("RegistryProxy.RoundTrip: rewrote www-authenticate header;\n  from: %s\n    to: %s", authHeader, newAuthHeader)
 	}
 
 	return resp, nil

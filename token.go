@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 	"net/http/httputil"
 	"net/url"
@@ -55,17 +54,17 @@ func (tp *TokenProxy) Director(req *http.Request) {
 	queryParams := req.URL.Query()
 	serviceParam := queryParams.Get("service")
 	if serviceParam == "" {
-		log.Printf("TokenProxy.Director: no service parameter was found in the request: %s", originalURL)
+		logger.Error("TokenProxy.Director: no service parameter was found in the request", "url", originalURL)
 		return
 	}
 	scopeParam := queryParams.Get("scope")
 	if scopeParam == "" {
-		log.Printf("TokenProxy.Director: no scope parameter was found in the request: %s", originalURL)
+		logger.Error("TokenProxy.Director: no scope parameter was found in the request", "url", originalURL)
 		return
 	}
 	originalScope, err := ParseResourceScope(scopeParam)
 	if err != nil {
-		log.Printf("TokenProxy.Director: unable to parse request scope parameter, error: %s; url: %s", err, originalURL)
+		logger.Error("TokenProxy.Director: unable to parse request scope parameter", "error", err, "url", originalURL)
 		return
 	}
 
@@ -73,7 +72,7 @@ func (tp *TokenProxy) Director(req *http.Request) {
 	// the value in the orignalScope
 	proxy, err := tp.ServerConfig.BestMatch(originalScope)
 	if err != nil {
-		log.Printf("TokenProxy.Director: unable to match scope %s to a known proxy config, error: %s", scopeParam, err)
+		logger.Error("TokenProxy.Director: unable to match scope to a known proxy config", "scope", scopeParam, "error", err)
 		return
 	}
 
@@ -86,7 +85,7 @@ func (tp *TokenProxy) Director(req *http.Request) {
 	}
 	newScope.ResourceName = strings.Trim(fmt.Sprintf("%s/%s", proxy.RemotePrefix, strings.TrimPrefix(newScope.ResourceName, proxy.LocalPrefix)), "/")
 	queryParams.Set("scope", newScope.String())
-	log.Printf("TokenProxy.Director: rewrote scope in request from: \"%s\" to: \"%s\"", originalScope, newScope)
+	logger.Debug("TokenProxy.Director: rewrote scope in request", "from", originalScope, "to", newScope)
 
 	// change the request from a request to our token endpoint to the remote token endpoint
 	u, _ := url.Parse(tokenEndpoints[proxy.RegistryHost].Realm) // e.g. https://auth.docker.io/token
@@ -97,11 +96,11 @@ func (tp *TokenProxy) Director(req *http.Request) {
 
 	// add the proxy config key to the request context so the transport function can use it
 	req.Header.Set(proxyConfigHeader, proxy.LocalPrefix)
-	log.Printf("TokenProxy.Director: rewrote url:%s into:%s", originalURL, req.URL)
+	logger.Debug("TokenProxy.Director: rewrote url:%s into:%s", originalURL, req.URL)
 }
 
 func (tp *TokenProxy) RoundTrip(req *http.Request) (*http.Response, error) {
-	log.Printf("TokenProxy.RoundTrip: request received with url=%s", req.URL)
+	logger.Debug("TokenProxy.RoundTrip: request received", "url", req.URL)
 
 	// Retrieve the proxy config value from the Director
 	proxyLocalPrefix := req.Header.Get(proxyConfigHeader)
@@ -118,11 +117,11 @@ func (tp *TokenProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 	// we don't require them to authenticate to us
 	authHeader := req.Header.Get("Authorization")
 	if authHeader != "" {
-		log.Printf("TokenProxy.RoundTrip: WARNING received an Authorization header from the client: %s", authHeader)
+		logger.Warn("TokenProxy.RoundTrip: WARNING received an Authorization header from the client", "header", authHeader)
 	}
 	req.Header.Set("Authorization", proxy.AuthHeader)
 
-	SetUserAgent(req)
+	SetUserAgent(req, tp.ServerConfig.ProxyFQDN)
 	CleanHeaders(req)
 
 	LogRequest("TokenProxy.RoundTrip: about to send the following request to remote token service", req)
@@ -133,14 +132,14 @@ func (tp *TokenProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 	if err != nil {
 		return nil, fmt.Errorf("TokenProxy.RoundTrip: upstream request failed with error: %+v", err)
 	}
-	log.Printf("TokenProxy.RoundTrip: DEBUG upstream request completed (status=%d) url=%s", resp.StatusCode, req.URL)
+	logger.Debug("TokenProxy.RoundTrip: DEBUG upstream request completed", "status", resp.StatusCode, "url", req.URL)
 
 	// process the response body
 	responseData, err := ParseTokenRequestResponse(resp)
 	if err != nil {
 		return nil, fmt.Errorf("TokenProxy.RoundTrip: unable to parse upstream token response; err:%s", err)
 	}
-	log.Printf("TokenProxy.RoundTrip: DEBUG parsed response data: %+v", responseData)
+	logger.Debug("TokenProxy.RoundTrip: DEBUG parsed response", "data", responseData)
 
 	if responseData.Token == "" {
 		return nil, fmt.Errorf("TokenProxy.RoundTrip: no token found in parsed response body: %+v", responseData)
@@ -151,11 +150,11 @@ func (tp *TokenProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 	// we're going to need these to have a value for the calculation below
 	if responseData.IssuedAt.IsZero() {
 		responseData.IssuedAt = now
-		log.Printf("TokenProxy.RoundTrip: DEBUG token from registry had no IssuedAt value (using %s)", responseData.IssuedAt)
+		logger.Debug("TokenProxy.RoundTrip: DEBUG token from registry had no IssuedAt value (using computed value)", "IssuedAt", responseData.IssuedAt)
 	}
 	if responseData.ExpiresIn == 0 {
 		responseData.ExpiresIn = 600
-		log.Printf("TokenProxy.RoundTrip: DEBUG token from registry had no ExpiresIn value (using %d seconds)", responseData.ExpiresIn)
+		logger.Debug("TokenProxy.RoundTrip: DEBUG token from registry had no ExpiresIn value (using computed value)", "seconds", responseData.ExpiresIn)
 	}
 
 	tokenExpiresAt := responseData.IssuedAt.Add(time.Duration(responseData.ExpiresIn) * time.Second)
@@ -170,7 +169,7 @@ func (tp *TokenProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 
 	responseData.Token = encryptedToken
 
-	log.Printf("TokenProxy.RoundTrip: generted token with claims: %s", token.ClaimsJSON())
+	logger.Info("TokenProxy.RoundTrip: generted token", "claims", token.ClaimsJSON())
 
 	if err := ReplaceResponseBody(resp, responseData); err != nil {
 		return nil, fmt.Errorf("TokenProxy.RoundTrip: unable to update the response body: %s", err)

@@ -2,7 +2,6 @@ package main
 
 import (
 	"fmt"
-	"log"
 	"net/http"
 )
 
@@ -22,9 +21,9 @@ func ServeServiceDiscoveryEndpoint(w http.ResponseWriter, r *http.Request) {
 // for example with docker hub the result is "https://auth.docker.io/token"
 func DiscoverTokenEndpoint(registryHost string) (*WWWAuthenticateData, error) {
 	url := fmt.Sprintf("https://%s/v2/", registryHost)
-	log.Printf("DiscoverTokenEndpoint: making request to %s", url)
+	logger.Debug("DiscoverTokenEndpoint: making request", "url", url)
 	resp, err := http.Get(url)
-	LogResponse("DiscoverTokenEndpoint: received the following response", resp)
+	LogResponse("DiscoverTokenEndpoint: received response", resp)
 	if err != nil {
 		return nil, fmt.Errorf("DiscoverTokenEndpoint: failed to query the registry host %s: %+v", registryHost, err)
 	}
@@ -38,7 +37,9 @@ func DiscoverTokenEndpoint(registryHost string) (*WWWAuthenticateData, error) {
 		return nil, fmt.Errorf("DiscoverTokenEndpoint: www-authenticate header could not be parsed; header: %s", authHeader)
 	}
 
-	log.Printf("DiscoverTokenEndpoint: DEBUG: parsed www-authenticate header %+v", authHeaderFields)
-	log.Printf("DiscoverTokenEndpoint: registry %s: discovered token endpoint at %s", registryHost, authHeaderFields.Realm)
+	logger.Debug("DiscoverTokenEndpoint: DEBUG: parsed www-authenticate header", "header", authHeaderFields)
+	logger.Info("DiscoverTokenEndpoint: discovered endpoint",
+		"registry", registryHost,
+		"endpoint", authHeaderFields.Realm)
 	return &authHeaderFields, nil
 }
