@@ -101,6 +101,7 @@ jobs:
         id: repo_info
         uses: actions/github-script@v7
         with:
+          result-encoding: string
           script: |
             const repoInfo = await github.rest.repos.get({
               owner: context.repo.owner,
