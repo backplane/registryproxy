@@ -26,11 +26,22 @@ jobs:
           go-version: '>=1.20'
 
       # https://github.com/goreleaser/goreleaser-action
-      - name: Run GoReleaser
+      - name: Run GoReleaser (Tag)
+        if: github.event_name != 'pull_request'
         uses: goreleaser/goreleaser-action@v5
         with:
           version: latest
           args: release --clean
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # https://github.com/goreleaser/goreleaser-action
+      - name: Run GoReleaser (PR)
+        if: github.event_name == 'pull_request'
+        uses: goreleaser/goreleaser-action@v5
+        with:
+          version: latest
+          args: release --clean --snapshot --skip-publish --skip-validate
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
@@ -40,7 +51,6 @@ jobs:
         with:
           name: binaries
           path: dist/*
-
 
   image:
     runs-on: ubuntu-latest
