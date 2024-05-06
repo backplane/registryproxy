@@ -38,15 +38,10 @@ With the above configuration, navigating to reg.example.com/bp/true will serve t
 
 To use RegistryProxy, follow these steps:
 
-1. Clone the repository:
+1. Create a config.yaml file with your specific configurations.
+2. Run the proxy:
     ```bash
-    git clone https://github.com/yourusername/registryproxy.git
-    ```
-2. Create a config.yaml file with your specific configurations.
-3. Build and run the proxy:
-    ```bash
-    docker build -t registryproxy .
-    docker run -p 5000:5000 registryproxy
+    docker run --rm -d -p 5000:5000 --volume "$(pwd)/config.yaml:/config.yaml:ro" backplane/registryproxy --config /config.yaml
     ```
 
 ## Security Considerations
