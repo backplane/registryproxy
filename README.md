@@ -2,6 +2,11 @@
 
 RegistryProxy is a reverse proxy designed for Docker registries. It provides URL rewriting capabilities, allowing users to set up a custom domain and namespace that serves data from another registry, be it private or public. This enables more accessible namespacing and domain handling for Docker images stored in various registries.
 
+Repo       | URL
+---------: | --------------------------------------------------
+GitHub     | <https://github.com/backplane/registryproxy>
+Docker Hub | <https://hub.docker.com/r/backplane/registryproxy>
+
 ## Features
 
 - **Custom Domain Mapping**: Map any domain to a target Docker registry with configurable paths.
