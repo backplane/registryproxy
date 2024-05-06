@@ -5,6 +5,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"io"
+	"log/slog"
 	"net/http"
 	"net/http/httputil"
 	"regexp"
@@ -183,4 +184,19 @@ func CleanHeaders(req *http.Request) {
 // SlashJoin joins the two given strings with a slash (ensuring exactly one slash)
 func SlashJoin(a, b string) string {
 	return fmt.Sprintf("%s/%s", strings.TrimRight(a, "/"), strings.TrimLeft(b, "/"))
+}
+
+// setLogLevel sets the log level
+func setLogLevel(level string) {
+	switch strings.ToUpper(level) {
+	case "INFO":
+		logLevel.Set(slog.LevelInfo)
+	case "WARN":
+		logLevel.Set(slog.LevelWarn)
+	case "ERROR":
+		logLevel.Set(slog.LevelError)
+	// case "DEBUG":
+	default:
+		logLevel.Set(slog.LevelDebug)
+	}
 }

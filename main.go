@@ -18,12 +18,14 @@ package main
 
 import (
 	"fmt"
+	"log"
 	"log/slog"
 	"net/http"
 	"os"
 	"strings"
 
 	"aidanwoods.dev/go-paseto"
+	"github.com/urfave/cli/v2"
 )
 
 const (
@@ -32,17 +34,69 @@ const (
 )
 
 var (
+	// version, commit, date, builtBy are provided by goreleaser during build
+	version = "dev"
+	commit  = "dev"
+	date    = "unknown"
+	builtBy = "unknown"
+
 	tokenEndpoints = map[string]*WWWAuthenticateData{} // mapping of registryHosts to token endpoint URLs
 	logger         *slog.Logger
+	logLevel       *slog.LevelVar
 )
 
 func init() {
-	logger = slog.New(slog.NewTextHandler(os.Stdout, nil))
+	logLevel = new(slog.LevelVar)
+
+	cli.VersionPrinter = func(c *cli.Context) {
+		fmt.Printf("registryproxy version %s; commit %s; built on %s; by %s\n", version, commit, date, builtBy)
+	}
 }
 
 func main() {
+	app := &cli.App{
+		Name:    "registryproxy",
+		Version: version,
+		Usage:   "reverse proxy for container image registries (like Docker Hub)",
+		Flags: []cli.Flag{
+			&cli.StringFlag{
+				Name:  "config",
+				Value: "",
+				Usage: "path to the config file",
+			},
+			&cli.StringFlag{
+				Name:  "loglevel",
+				Value: "INFO",
+				Usage: "how verbosely to log, one of: DEBUG, INFO, WARN, ERROR",
+			},
+		},
+		Action: func(ctx *cli.Context) error {
+			setLogLevel(ctx.String("loglevel"))
+			logger = slog.New(slog.NewTextHandler(
+				os.Stderr,
+				&slog.HandlerOptions{
+					Level: logLevel,
+				}),
+			)
+			logger.Info("registryproxy starting up",
+				"version", version,
+				"commit", commit,
+				"date", date,
+				"builder", builtBy,
+			)
+			Serve(ctx.String("config"))
+			return nil
+		},
+	}
+
+	if err := app.Run(os.Args); err != nil {
+		log.Fatal(err)
+	}
+}
+
+func Serve(configPath string) {
 	// load the yaml config file
-	config, err := LoadConfig()
+	config, err := LoadConfig(configPath)
 	if err != nil {
 		logger.Error("config loading error", "error", err)
 		os.Exit(1)

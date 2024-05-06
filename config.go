@@ -11,24 +11,29 @@ import (
 )
 
 type ProxyItem struct {
-	RegistryHost string `yaml:"registry"`
-	RemotePrefix string `yaml:"remote"`
-	LocalPrefix  string `yaml:"-"` // this is set from the item name
-	AuthHeader   string `yaml:"auth"`
+	RegistryHost string `yaml:"registry" json:"registry"`
+	RemotePrefix string `yaml:"remote" json:"remote"`
+	LocalPrefix  string `yaml:"-" json:"-"` // this is set from the item name
+	AuthHeader   string `yaml:"auth" json:"auth"`
 }
 
 type Config struct {
-	ListenAddr string               `yaml:"listen_addr"`
-	ListenPort string               `yaml:"listen_port"`
-	ProxyFQDN  string               `yaml:"proxy_fqdn"`
-	Proxies    map[string]ProxyItem `yaml:"proxies"`
-	SecretKey  string               `yaml:"secretkey"`
+	ListenAddr string               `yaml:"listen_addr" json:"listen_addr"`
+	ListenPort string               `yaml:"listen_port" json:"listen_port"`
+	ProxyFQDN  string               `yaml:"proxy_fqdn" json:"proxy_fqdn"`
+	SecretKey  string               `yaml:"secret_key" json:"secret_key"`
+	LogLevel   string               `yaml:"log_level" json:"log_level"`
+	Proxies    map[string]ProxyItem `yaml:"proxies" json:"proxies"`
 }
 
-func LoadConfig() (Config, error) {
-	configPath := GetEnvDefault("CONFIG_PATH", "./config.yaml")
-
+func LoadConfig(configPath string) (Config, error) {
 	var config Config
+
+	if configPath == "" {
+		configPath = GetEnvDefault("CONFIG_PATH", "./config.yaml")
+	}
+
+	logger.Info("loading configuration", "file", configPath)
 	data, err := os.ReadFile(configPath)
 	if err != nil {
 		return config, err
@@ -38,6 +43,9 @@ func LoadConfig() (Config, error) {
 		return config, err
 	}
 
+	if config.LogLevel != "" {
+		setLogLevel(config.LogLevel)
+	}
 	if config.ListenAddr == "" {
 		config.ListenAddr = GetEnvDefault("LISTEN_ADDR", "0.0.0.0")
 	}
@@ -61,7 +69,8 @@ func (cfg Config) Log() {
 	if err != nil {
 		log.Fatalf("problem printing config: +%v", err)
 	}
-	log.Printf("starting up with the following configuration:\n%s", configJSON)
+	logger.Info("printing running configuration")
+	fmt.Println(string(configJSON))
 }
 
 // BestMatch searches through the configured proxies and tries to find the best
