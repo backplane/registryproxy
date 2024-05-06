@@ -114,7 +114,7 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 		logger.Debug("RegistryProxy.RoundTrip: have www-authenticate header", "header", authHeader)
 		authHeaderFields, ok := ParseWWWAuthenticate(authHeader)
 		if !ok {
-			return nil, fmt.Errorf("RegistryProxy.RoundTrip: parsing WWW-Authenticate header failed; header: %s", authHeader)
+			return nil, fmt.Errorf("RegistryProxy.RoundTrip: parsing WWW-Authenticate header failed header: %s", authHeader)
 		}
 		logger.Debug("RegistryProxy.RoundTrip: parsed www-authenticate header", "parsed", authHeaderFields)
 
@@ -124,12 +124,12 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse scope in www-authenticate header; error:%s", err)
 		}
-		headerScope.ResourceName = SlashJoin(proxy.LocalPrefix, strings.TrimPrefix(headerScope.ResourceName, proxy.RemotePrefix))
+		headerScope.ResourceName = SlashJoin(proxy.LocalPrefix, strings.TrimPrefix(headerScope.ResourceName, proxy.RemotePrefix), true)
 		authHeaderFields.Scope = headerScope.String()
 
 		newAuthHeader := authHeaderFields.String()
 		resp.Header.Set("www-authenticate", newAuthHeader)
-		logger.Debug("RegistryProxy.RoundTrip: rewrote www-authenticate header;\n  from: %s\n    to: %s", authHeader, newAuthHeader)
+		logger.Debug("RegistryProxy.RoundTrip: rewrote www-authenticate header", "from", authHeader, "to", newAuthHeader)
 	}
 
 	return resp, nil

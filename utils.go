@@ -182,7 +182,10 @@ func CleanHeaders(req *http.Request) {
 }
 
 // SlashJoin joins the two given strings with a slash (ensuring exactly one slash)
-func SlashJoin(a, b string) string {
+func SlashJoin(a, b string, trim_exterior bool) string {
+	if trim_exterior {
+		return fmt.Sprintf("%s/%s", strings.Trim(a, "/"), strings.Trim(b, "/"))
+	}
 	return fmt.Sprintf("%s/%s", strings.TrimRight(a, "/"), strings.TrimLeft(b, "/"))
 }
 
