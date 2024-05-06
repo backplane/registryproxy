@@ -3,7 +3,6 @@ package main
 import (
 	"encoding/json"
 	"fmt"
-	"log"
 	"os"
 	"strings"
 
@@ -67,7 +66,8 @@ func (cfg Config) Log() {
 	// log the fully-parsed config data
 	configJSON, err := json.MarshalIndent(cfg, "", "  ")
 	if err != nil {
-		log.Fatalf("problem printing config: +%v", err)
+		logger.Error("problem printing config", "error", err)
+		return
 	}
 	logger.Info("printing running configuration")
 	fmt.Println(string(configJSON))

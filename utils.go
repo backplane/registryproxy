@@ -149,7 +149,7 @@ func ParseWWWAuthenticate(headerValue string) (WWWAuthenticateData, bool) {
 func LogRequest(preamble string, req *http.Request) {
 	dump, err := httputil.DumpRequest(req, true)
 	if err != nil {
-		logger.Debug("logRequest: Error dumping request: %v", err)
+		logger.Debug("logRequest: failed httputil.DumpRequest", "error", err)
 		return
 	}
 	if preamble != "" {
@@ -163,7 +163,7 @@ func LogRequest(preamble string, req *http.Request) {
 func LogResponse(preamble string, resp *http.Response) {
 	dump, err := httputil.DumpResponse(resp, true)
 	if err != nil {
-		logger.Debug("logResponse: Error dumping response", "error", err)
+		logger.Debug("logResponse: failed httputil.DumpResponse", "error", err)
 		return
 	}
 	if preamble != "" {

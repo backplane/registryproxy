@@ -93,7 +93,7 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 	resp, err := http.DefaultTransport.RoundTrip(req)
 	LogResponse("RegistryProxy.RoundTrip: response from upstream", resp)
 	if err != nil {
-		logger.Error("RegistryProxy.RoundTrip: upstream request failed with error: %+v", err)
+		logger.Error("RegistryProxy.RoundTrip: upstream request failed", "error", err)
 		return nil, err
 	}
 	logger.Info("RegistryProxy.RoundTrip: upstream request completed", "status", resp.StatusCode, "url", req.URL)
