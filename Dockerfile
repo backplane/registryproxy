@@ -1,15 +1,16 @@
-FROM golang:1-alpine AS builder
-RUN apk add --no-cache git ca-certificates
-WORKDIR /src
-COPY . .
-RUN go build -o /registryproxy
+FROM alpine:edge as dist
+ARG TARGETPLATFORM
 
-FROM alpine
+# this is only there if goreleaser has created it
+COPY dist /dist/
+RUN set -eux; \
+  platform_dirname=$(printf '%s' "${TARGETPLATFORM}" | tr / _ | tr A-Z a-z | sed 's/amd64/amd64_v1/g'); \
+  subdir=$(printf '/dist/cli_%s' $platform_dirname); \
+  cp ${subdir}/registryproxy /registryproxy; \
+  chmod +x /registryproxy;
+
+FROM alpine:edge
 RUN apk add --no-cache ca-certificates
-COPY --from=builder /registryproxy /
-
-# uncomment the following two lines if you're exposing a private GCR registry
-# COPY key.json /key.json
-# ENV GOOGLE_APPLICATION_CREDENTIALS /key.json
+COPY --from=dist /registryproxy /
 
 ENTRYPOINT [ "/registryproxy" ]
