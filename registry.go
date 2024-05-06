@@ -119,7 +119,7 @@ func (rp *RegistryProxy) RoundTrip(req *http.Request) (*http.Response, error) {
 		logger.Debug("RegistryProxy.RoundTrip: parsed www-authenticate header", "parsed", authHeaderFields)
 
 		authHeaderFields.Realm = fmt.Sprintf(`https://%s/_token`, rp.FQDN)
-		authHeaderFields.Service = fmt.Sprintf(`https://%s`, rp.FQDN)
+		authHeaderFields.Service = rp.FQDN
 		headerScope, err := ParseResourceScope(authHeaderFields.Scope)
 		if err != nil {
 			return nil, fmt.Errorf("failed to parse scope in www-authenticate header; error:%s", err)
