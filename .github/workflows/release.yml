@@ -28,7 +28,7 @@ jobs:
       # https://github.com/goreleaser/goreleaser-action
       - name: Run GoReleaser (Tag)
         if: github.event_name != 'pull_request'
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
           args: release --clean
@@ -38,7 +38,7 @@ jobs:
       # https://github.com/goreleaser/goreleaser-action
       - name: Run GoReleaser (PR)
         if: github.event_name == 'pull_request'
-        uses: goreleaser/goreleaser-action@v5
+        uses: goreleaser/goreleaser-action@v6
         with:
           version: latest
           args: release --clean --snapshot --skip-publish --skip-validate
