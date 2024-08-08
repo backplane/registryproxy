@@ -3,7 +3,7 @@ module registryproxy
 go 1.22
 
 require (
-	aidanwoods.dev/go-paseto v1.5.1
+	aidanwoods.dev/go-paseto v1.5.2
 	github.com/urfave/cli/v2 v2.27.2
 	gopkg.in/yaml.v2 v2.4.0
 )
