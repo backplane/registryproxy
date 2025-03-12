@@ -4,7 +4,7 @@ go 1.22
 
 require (
 	aidanwoods.dev/go-paseto v1.5.4
-	github.com/urfave/cli/v2 v2.27.5
+	github.com/urfave/cli/v2 v2.27.6
 	gopkg.in/yaml.v2 v2.4.0
 )
 
