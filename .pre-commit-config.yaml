@@ -1,6 +1,6 @@
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
-    rev: v4.6.0
+    rev: v5.0.0
     hooks:
       - id: check-added-large-files
       - id: check-case-conflict
@@ -18,11 +18,11 @@ repos:
           - --branch
           - main
   - repo: https://github.com/golangci/golangci-lint
-    rev: v1.58.0
+    rev: v2.0.2
     hooks:
       - id: golangci-lint
   - repo: https://github.com/rhysd/actionlint
-    rev: v1.6.27
+    rev: v1.7.7
     hooks:
       - id: actionlint-docker
         name: check github workflows with actionlint

@@ -26,7 +26,7 @@ jobs:
       - name: run pre-commit
         uses: pre-commit/action@v3.0.1
         env:
-          SKIP: no-commit-to-branch
+          SKIP: no-commit-to-branch,golangci-lint
 
   golangci-lint:
     runs-on: ubuntu-latest
