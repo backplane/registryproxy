@@ -1,16 +1,17 @@
-FROM alpine:edge as dist
-ARG TARGETPLATFORM
+FROM alpine:edge AS dist
+ARG TARGETARCH TARGETOS
 
 # this is only there if goreleaser has created it
-COPY dist /dist/
+COPY dist/registryproxy_*_${TARGETOS}_${TARGETARCH}*/registryproxy* /
 RUN set -eux; \
-  platform_dirname=$(printf '%s' "${TARGETPLATFORM}" | tr / _ | tr A-Z a-z | sed 's/amd64/amd64_v1/g'); \
-  subdir=$(printf '/dist/cli_%s' $platform_dirname); \
-  cp ${subdir}/registryproxy /registryproxy; \
   chmod +x /registryproxy;
 
 FROM alpine:edge
+LABEL maintainer="Backplane BV <backplane@users.noreply.github.com>"
+
+# hadolint ignore=DL3018
 RUN apk add --no-cache ca-certificates
+
 COPY --from=dist /registryproxy /
 
 ENTRYPOINT [ "/registryproxy" ]
