@@ -35,14 +35,14 @@ proxies:
     auth: "Basic cmljazpOZXZlckdvbm5hTGV0WW91RG93bjI="
 ```
 
-With the above configuration, navigating to reg.example.com/bp/true will serve the image from hub.docker.com/r/backplane/true. It also supports proxying a private repository at ghcr.io to a public URL.
+With the above configuration, pulling from `reg.example.com/bp/true` will serve the image from `hub.docker.com/r/backplane/true`. It also supports proxying a private repository at ghcr.io to a public URL.
 
 To use RegistryProxy, follow these steps:
 
 1. Create a config.yaml file with your specific configurations.
 2. Run the proxy:
     ```bash
-    docker run --rm -d -p 5000:5000 --volume "$(pwd)/config.yaml:/config.yaml:ro" backplane/registryproxy --config /config.yaml
+    docker run --rm -d -p 5000:5000 --volume "$(pwd)/config.yaml:/config.yaml:ro" backplane/registryproxy
     ```
 
 ## Security Considerations

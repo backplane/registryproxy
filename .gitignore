@@ -2,5 +2,6 @@
 *.crt
 *.pem
 config.yaml
+dist/
 key.json
 registryproxy

@@ -50,7 +50,7 @@ jobs:
         uses: actions/upload-artifact@v4
         with:
           name: binaries
-          path: dist/cli*
+          path: dist/*
 
   image:
     runs-on: ubuntu-latest
@@ -139,7 +139,7 @@ jobs:
           tags: ${{ steps.meta.outputs.tags }}
           labels: |
             ${{ steps.meta.outputs.labels }}
-          platforms: linux/amd64,linux/arm64
+          platforms: linux/amd64,linux/arm64,linux/arm
           cache-from: type=gha
           cache-to: type=gha,mode=max
 
