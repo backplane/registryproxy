@@ -2,7 +2,7 @@ FROM alpine:edge AS dist
 ARG TARGETARCH TARGETOS
 
 # this is only there if goreleaser has created it
-COPY dist/registryproxy_${TARGETOS}_${TARGETARCH}*/registryproxy* /
+COPY dist/registryproxy_${TARGETOS}_${TARGETARCH}_*/registryproxy* /
 RUN set -eux; \
   chmod +x /registryproxy;
 
