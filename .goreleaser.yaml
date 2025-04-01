@@ -23,8 +23,7 @@ builds:
         goarch: arm
 
 universal_binaries:
-  - id: cli
-    replace: false
+  - replace: false
 
 archives:
   - formats: [tar.gz]
