@@ -99,7 +99,7 @@ jobs:
       # https://github.com/actions/github-script
       - name: Fetch repository info
         id: repo_info
-        uses: actions/github-script@v7
+        uses: actions/github-script@v8
         with:
           result-encoding: string
           script: |
