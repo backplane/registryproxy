@@ -62,7 +62,7 @@ jobs:
 
       # https://github.com/actions/download-artifact
       - name: Download binaries
-        uses: actions/download-artifact@v4
+        uses: actions/download-artifact@v6
         with:
           name: binaries
           path: dist
