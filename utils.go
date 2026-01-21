@@ -69,7 +69,7 @@ func ParseTokenRequestResponse(resp *http.Response) (*TokenResponse, error) {
 	}
 
 	// Read the body of the response
-	defer resp.Body.Close()
+	defer resp.Body.Close() //nolint
 	body, err := io.ReadAll(resp.Body)
 	if err != nil {
 		return nil, fmt.Errorf("parseTokenRequestResponse: failed to read response body: %w", err)
