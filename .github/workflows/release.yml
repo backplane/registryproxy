@@ -136,9 +136,17 @@ jobs:
         with:
           push: true
           context: .
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: |
+          tags: |-
+            ${{ steps.meta.outputs.tags }}
+          labels: |-
             ${{ steps.meta.outputs.labels }}
+          build-args: |-
+            COMMIT_SHA=${{ github.sha }}
+            GITHUB_TAG=${{ github.ref_name }}
+            GIT_COMMIT=${{ github.sha }}
+            GIT_TAG=${{ github.ref_name }}
+          provenance: mode=max
+          sbom: true
           platforms: linux/amd64,linux/arm64,linux/arm
           cache-from: type=gha
           cache-to: type=gha,mode=max
