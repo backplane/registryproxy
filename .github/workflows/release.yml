@@ -146,6 +146,7 @@ jobs:
             GIT_COMMIT=${{ github.sha }}
             GIT_TAG=${{ github.ref_name }}
           provenance: mode=max
+          sbom: true
           platforms: linux/amd64,linux/arm64,linux/arm
           cache-from: type=gha
           cache-to: type=gha,mode=max
